@@ -30,6 +30,8 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/expenses", expenseRoutes);
 
+app.get("/", (req, res) => res.json({ status: "OK", message: "Festival Fund API running" }));
+
 // Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
