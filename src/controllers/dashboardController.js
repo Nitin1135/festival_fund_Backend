@@ -1,6 +1,7 @@
 const Transaction = require("../models/Transaction");
 const Member = require("../models/Member");
 const Expense = require("../models/Expense");
+const Festival = require("../models/Festival");
 const { format, subMonths, startOfMonth, endOfMonth } = require("date-fns");
 
 // GET /api/dashboard/stats
@@ -8,8 +9,14 @@ const getDashboardStats = async (req, res) => {
   try {
     const today = format(new Date(), "yyyy-MM-dd");
 
-    // KPI counts
-    const [totalFunds, totalMembers, pendingPayments, todayAgg, totalExpenseAgg] = await Promise.all([
+    const [
+      totalFundsAgg,
+      totalMembers,
+      pendingMembers,
+      todayAgg,
+      totalExpenseAgg,
+      activeFestival,
+    ] = await Promise.all([
       Transaction.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
       Member.countDocuments(),
       Member.countDocuments({ status: "unpaid" }),
@@ -18,10 +25,20 @@ const getDashboardStats = async (req, res) => {
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
       Expense.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
+      Festival.findOne({ isActive: true }),
     ]);
 
-    const totalCollection = totalFunds[0]?.total || 0;
+    const totalCollection = totalFundsAgg[0]?.total || 0;
     const totalExpense = totalExpenseAgg[0]?.total || 0;
+    const openingBalance = activeFestival?.openingBalance || 0;
+    const currentBalance = openingBalance + totalCollection - totalExpense;
+
+    // Pending amount = sum of unpaid members' amounts
+    const pendingAgg = await Member.aggregate([
+      { $match: { status: "unpaid" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const pendingAmount = pendingAgg[0]?.total || 0;
 
     // Monthly collection — last 6 months
     const monthlyData = [];
@@ -33,10 +50,7 @@ const getDashboardStats = async (req, res) => {
         { $match: { date: { $gte: start, $lte: end } } },
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]);
-      monthlyData.push({
-        month: format(d, "MMM"),
-        amount: result[0]?.total || 0,
-      });
+      monthlyData.push({ month: format(d, "MMM"), amount: result[0]?.total || 0 });
     }
 
     // Payment status pie
@@ -47,23 +61,28 @@ const getDashboardStats = async (req, res) => {
       { name: "Unpaid", value: unpaid, color: "#ef4444" },
     ];
 
-    // Recent 5 transactions
+    // Recent 5 transactions — already have festival, category, type from model
     const recentTransactions = await Transaction.find()
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(5)
+      .lean();
 
     res.json({
       kpi: {
+        openingBalance,
+        currentBalance,
         totalFunds: totalCollection,
-        totalMembers,
-        pendingPayments,
-        todayCollection: todayAgg[0]?.total || 0,
         totalExpense,
+        pendingAmount,
+        totalMembers,
+        todayCollection: todayAgg[0]?.total || 0,
+        pendingPayments: pendingMembers,
         balance: totalCollection - totalExpense,
       },
       monthlyData,
       paymentStatusData,
       recentTransactions,
+      festivalName: activeFestival?.name || null,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -7,6 +7,7 @@ const transactionRoutes = require("./routes/transactionRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
+const festivalRoutes = require("./routes/festivalRoutes");
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/expenses", expenseRoutes);
+app.use("/api/festivals", festivalRoutes);
 
 app.get("/", (req, res) => res.json({ status: "OK", message: "Festival Fund API running" }));
 

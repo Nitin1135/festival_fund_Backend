@@ -3,7 +3,7 @@ const Member = require("../models/Member");
 // GET /api/members
 const getMembers = async (req, res) => {
   try {
-    const { search, status } = req.query;
+    const { search, category } = req.query;
     const query = {};
 
     if (search) {
@@ -12,7 +12,7 @@ const getMembers = async (req, res) => {
         { mobile: { $regex: search, $options: "i" } },
       ];
     }
-    if (status && status !== "all") query.status = status;
+    if (category && category !== "all") query.category = category;
 
     const members = await Member.find(query).sort({ createdAt: -1 });
     res.json(members);
@@ -24,15 +24,17 @@ const getMembers = async (req, res) => {
 // POST /api/members
 const createMember = async (req, res) => {
   try {
-    const { name, mobile, amount, status } = req.body;
-    if (!name || !mobile || !amount)
-      return res.status(400).json({ message: "All fields are required" });
+    const { name, mobile, amount, status, address, category } = req.body;
+    if (!name || !mobile)
+      return res.status(400).json({ message: "Name and mobile are required" });
 
     const member = await Member.create({
       name,
       mobile,
-      amount: Number(amount),
+      amount: Number(amount) || 0,
       status: status || 'unpaid',
+      address: address || '',
+      category: category || '',
       createdBy: req.user._id,
     });
     res.status(201).json(member);
@@ -44,10 +46,10 @@ const createMember = async (req, res) => {
 // PUT /api/members/:id
 const updateMember = async (req, res) => {
   try {
-    const { name, mobile, amount, status, lastPayment } = req.body;
+    const { name, mobile, amount, status, lastPayment, address, category } = req.body;
     const member = await Member.findByIdAndUpdate(
       req.params.id,
-      { name, mobile, amount: Number(amount), status, lastPayment },
+      { name, mobile, amount: Number(amount) || 0, status, lastPayment, address, category },
       { new: true, runValidators: true }
     );
     if (!member) return res.status(404).json({ message: "Member not found" });

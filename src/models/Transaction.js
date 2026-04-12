@@ -8,6 +8,9 @@ const transactionSchema = new mongoose.Schema(
     paymentMode: { type: String, enum: ["cash", "upi"], required: true },
     date: { type: String, required: true },
     time: { type: String, required: true },
+    festival: { type: String, default: '' },
+    category: { type: String, default: '' },
+    type: { type: String, enum: ['collection', 'expense'], default: 'collection' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
