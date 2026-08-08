@@ -4,6 +4,7 @@ const expenseSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
     amount: { type: Number, required: true },
+    festival: { type: String, default: '' },
     category: {
       type: String,
       enum: ["decoration", "food", "sound", "transport", "venue", "printing", "other"],

@@ -1,10 +1,10 @@
 const Transaction = require("../models/Transaction");
 const Member = require("../models/Member");
 
-// GET /api/reports?from=&to=&memberId=
+// GET /api/reports?from=&to=&memberId=&festival=
 const getReport = async (req, res) => {
   try {
-    const { from, to, memberId } = req.query;
+    const { from, to, memberId, festival } = req.query;
     const query = {};
 
     if (from && to) query.date = { $gte: from, $lte: to };
@@ -12,6 +12,7 @@ const getReport = async (req, res) => {
     else if (to) query.date = { $lte: to };
 
     if (memberId && memberId !== "all") query.memberId = memberId;
+    if (festival && festival !== "all") query.festival = festival;
 
     const transactions = await Transaction.find(query).sort({ date: -1 });
     const totalMembers = await Member.countDocuments();
@@ -26,22 +27,24 @@ const getReport = async (req, res) => {
   }
 };
 
-// GET /api/reports/export/csv?from=&to=&memberId=
+// GET /api/reports/export/csv?from=&to=&memberId=&festival=
 const exportCSV = async (req, res) => {
   try {
-    const { from, to, memberId } = req.query;
+    const { from, to, memberId, festival } = req.query;
     const query = {};
 
     if (from && to) query.date = { $gte: from, $lte: to };
     if (memberId && memberId !== "all") query.memberId = memberId;
+    if (festival && festival !== "all") query.festival = festival;
 
     const transactions = await Transaction.find(query).sort({ date: -1 });
 
     const rows = [
-      ["Transaction ID", "Member Name", "Amount", "Payment Mode", "Date", "Time"],
+      ["Transaction ID", "Member Name", "Festival", "Amount", "Payment Mode", "Date", "Time"],
       ...transactions.map((t) => [
         t._id.toString().slice(-6).toUpperCase(),
         t.memberName,
+        t.festival || "-",
         t.amount,
         t.paymentMode.toUpperCase(),
         t.date,
